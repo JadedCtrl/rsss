@@ -1,0 +1,28 @@
+================================================================================
+RSSS : `RSSS SAGE`	An RSS parser~
+================================================================================
+
+rsss is made to make your life (hopefully) a bit easier when you've got to deal
+with RSS data.
+
+It has functions for easily parsing both the overarching stucture, and the
+individual <item>'s.
+
+
+----------------------------------------
+USAGE
+----------------------------------------
+
+You're probably interested in `rsss:feed-items`, which returns a list of every
+item in the RSS feed, and the `rsss:title *data*`, `rsss:description`, etc.,
+which fetch the traits of individual <item>'s or the overarching <channel>.
+
+They're called like so: (function *data*), where *data* is the XML data.
+
+
+----------------------------------------
+BORING STUFF
+----------------------------------------
+License is in COPYING (GNU GPLv3)
+Author is Jaidyn Ann <jadedctrl@teknik.io>
+Sauce is at https://git.eunichx.us/rsss
