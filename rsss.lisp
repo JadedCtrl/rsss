@@ -52,10 +52,18 @@
     (setf ,list  (list ,item))
     (nconc ,list (list ,item))))
 
+(defmacro mapnil (function list)
+  "Map over a list with a function, but remove all NILs from the result list."
+  `(remove nil (mapcar ,function ,list)))
+
+(defmacro mapfirst (function list)
+  "Map over a list with a function, and return the first non-NIL result."
+  `(car (mapnil ,function ,list)))
+
 ;; VARYING LIST → LIST
-(defun equ-assoc (item list)
-  "Run #'assoc, but with #'equal as the test function."
-  (assoc item list :test #'equal))
+(defun str-assoc (item list)
+  "Run #'assoc, but with #'string-equal as the test function."
+  (assoc item list :test #'string-equal))
 
 ;; VARYING → BOOLEAN
 (defun nilp (item)
@@ -97,20 +105,22 @@
 ;; —————————————————
 ;; ATOM PARSING
 ;; —————————————————
-(defmacro parse-atom-children (rsss parent-node child-node extra-cond)
+(defmacro parse-atom-children (rsss parent-node child-node
+				    &optional (cond-1 '(T nil))
+				              (cond-2 '(T nil)))
   "Code common to parsing both overarching Atom XML and individual entries."
    `(mapcar
       (lambda (,child-node)
 	(common-let ,child-node nil
-	  (cond ((equal "link"  name)
-		 (setf (uri ,rsss)       (cadr (equ-assoc "href" attrs))))
-		((equal "title" name)
+	  (cond ((string-equal "link" name)
+		 (setf (uri ,rsss)       (cadr (str-assoc "href" attrs))))
+		((string-equal "title" name)
 		 (setf (name ,rsss)      (car chchild)))
-		((equal "updated" name)
+		((string-equal "updated" name)
 		 (setf (date ,rsss)      (car chchild)))
-		((equal "summary" name)
+		((string-equal "summary" name)
 		 (setf (desc ,rsss)      (car chchild)))
-		,extra-cond)))
+		,cond-1 ,cond-2)))
 ;;	  nil))
       (xmls:node-children ,parent-node)))
 
@@ -122,7 +132,7 @@
   (let ((feed (make-instance 'feed)))
     (parse-atom-children
       feed atom-node atom-child
-      ((equal "entry" name)
+      ((string-equal "entry" name)
        (append-or-replace (entries feed) (parse-atom-entry atom-child))))
     feed))
 
@@ -132,31 +142,47 @@
   (let ((entry (make-instance 'entry)))
     (parse-atom-children
       entry entry-node entry-child
-      ((equal "content" name)
-       (setf (text entry) (car chchild))))
+      ((string-equal "content" name)
+       (setf (text entry) (car chchild)))
+      ((string-equal "author" name)
+       (setf (author entry)
+	     (parse-atom-author-name entry-child))))
     entry))
 
+;; -----------------
+
+;; XMLS:NODE → STRING
+(defun parse-atom-author-name (author-node)
+  "Return the proper name of an author, given an Atom <author> node."
+  (common-let author-node nil
+    (if (stringp chchild)  chchild
+      (mapfirst
+	(lambda (chchchild)
+	  (if (string-equal "name" (xmls:node-name chchchild))
+	    (car (xmls:node-children chchchild))))
+	chchild))))
+ 
 
 
 ;; —————————————————
 ;; RSS1/RSS2 PARSING
 ;; —————————————————
 (defmacro parse-rss-children (rsss parent-node child-node
-				    &optional (cond-1 `(T nil))
-					      (cond-2 `(T nil))
-					      (cond-3 `(T nil))
-					      (cond-4 `(T nil)))
+				    &optional (cond-1 '(T nil))
+					      (cond-2 '(T nil))
+					      (cond-3 '(T nil))
+					      (cond-4 '(T nil)))
   "Some code common to parsing the children of rss nodes."
   `(mapcar
      (lambda (,child-node)
        (common-let ,child-node nil
-         (cond ((equal "title" name)
+         (cond ((string-equal "title" name)
 		(setf (name ,rsss) (ie-car chchild)))
-	       ((equal "pubDate" name)
+	       ((string-equal "pubDate" name)
 		(setf (date ,rsss) (ie-car chchild)))
-	       ((equal "date" name)
+	       ((string-equal "date" name)
 		(setf (date ,rsss) (ie-car chchild)))
-	       ((equal "link" name)
+	       ((string-equal "link" name)
 		(setf (uri ,rsss)  (ie-car chchild)))
 	       ,cond-1 ,cond-2 ,cond-3 ,cond-4)))
      (xmls:node-children ,parent-node)))
@@ -170,9 +196,9 @@
     (mapcar 
       (lambda (rss-child)
 	(let ((name (xmls:node-name rss-child)))
-	  (cond ((equal "channel" name)
+	  (cond ((string-equal "channel" name)
 		 (parse-rss-channel feed rss-child))
-		((equal "item"    name)
+		((string-equal "item"    name)
 		 (append-or-replace
 		   (entries feed) (parse-rss-item rss-child))))))
       (xmls:node-children rss-node))
@@ -183,9 +209,9 @@
   "Parse a channel node of an RSS feed; modifies the FEED object."
   (parse-rss-children
     feed channel-node channel-child
-    ((equal "description" name)
+    ((string-equal "description" name)
      (setf (desc feed) (ie-car chchild)))
-    ((equal "item" name)
+    ((string-equal "item" name)
      (append-or-replace (entries feed) (parse-rss-item channel-child))))
   feed)
 
@@ -195,7 +221,7 @@
   (let ((entry (make-instance 'entry)))
     (parse-rss-children
       entry entry-node entry-child
-      ((or (equal "content" name) (equal "encoded" name))
+      ((or (string-equal "content" name) (string-equal "encoded" name))
        (setf (text entry)   (ie-car chchild)))
       ;; about the following: people use <description> tags for both summaries
       ;; and for actual post-bodies. (wtf :/)
@@ -204,13 +230,13 @@
       ;; long…
       ;; this is a hack that won't always be helpful or effective, it's the
       ;; best trade-off I could think of. sorry ♥
-      ((equal "description" name)
+      ((string-equal "description" name)
        (if (and (< 250 (length (ie-car chchild))) (not (text entry)))
 	 (setf (text entry) (ie-car chchild))
 	 (setf (desc entry) (ie-car chchild))))
-      ((equal "enclosure" name)
-       (setf (media entry)  (cadr (assoc "url" attrs :test #'equal))))
-      ((or (equal "author" name) (equal "creator" name))
+      ((string-equal "enclosure" name)
+       (setf (media entry)  (cadr (str-assoc "url" attrs))))
+      ((or (string-equal "author" name) (string-equal "creator" name))
        (setf (author entry) (ie-car chchild))))
     entry))
 
@@ -225,10 +251,10 @@
   and :atom for (obviously!) Atom."
   (let ((name    (xmls:node-name node))
 	(attrs   (xmls:node-attrs node)))
-    (cond ((and (equal "rss" name)
+    (cond ((and (string-equal "rss" name)
 		(equal "2.0" (cadr (assoc "version" attrs :test #'equal))))
 	   :rss2)
-	  ((equal "rss" name)
+	  ((or (string-equal "rss" name) (string-equal "rdf" name))
 	   :rss1)
-	  ((equal "feed" name)
+	  ((string-equal "feed" name)
 	   :atom))))

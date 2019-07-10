@@ -16,7 +16,7 @@ USAGE
 ————————————————————————————————————————
 You can turn a feed's XML (string) into an RSSS:FEED object with #'rsss:parse.
 
-Then, you can read it by means of it's slots.
+Then, you can read it by means of its slots.
 
 Slots of both FEEDs and ENTRYs:
 * name
