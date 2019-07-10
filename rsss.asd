@@ -1,14 +1,9 @@
 (defsystem "rsss"
-  :version "0.1"
+  :version "0.9"
   :author "Jaidyn Ann <jadedctrl@teknik.io>"
   :license "GPLv3"
   :depends-on ("xmls")
-  :components ((:module "src"
-                :components
-		((:file "package")
-		(:file "main"))))
+  :components ((:file "rsss"))
   :description
-	"RSS parser library.")
-
-
-
+	"Reading Syndicated Stuff Sagely is a feed format-neutral parser.
+	Both Atom and RSS-friendly.")
