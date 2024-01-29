@@ -1,6 +1,6 @@
 (defsystem "rsss"
   :version "0.9"
-  :author "Jaidyn Ann <jadedctrl@teknik.io>"
+  :author "Jaidyn Ann <jadedctrl@posteo.at>"
   :license "GPLv3"
   :depends-on ("xmls")
   :components ((:file "rsss"))

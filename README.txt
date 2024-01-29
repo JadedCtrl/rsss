@@ -40,5 +40,5 @@ Good luck!
 BORING STUFF
 ————————————————————————————————————————
 License is in COPYING.txt (GNU GPLv3)
-Author is Jaidyn Ann <jadedctrl@teknik.io>
-Sauce is at https://git.eunichx.us/rsss.git
+Author is Jaidyn Ann <jadedctrl@posteo.at>
+Sauce is at https://hak.xwx.moe/jadedctrl/rsss.git
